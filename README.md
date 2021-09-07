@@ -37,10 +37,6 @@
   </a>
   <br/> 
 </p>
-
-<h4 align="center">
-  <a href="https://sparclink-f151d.web.app/sparclink" target="_blank">SPARClink Web App</a>
-</h4>
  <br/> <br/>
 <p align="center">
   <img src="https://github.com/SPARC-FAIR-Codeathon/SPARClink/blob/main/docs/images/2021-07-25%2013-47-30.gif"/>
