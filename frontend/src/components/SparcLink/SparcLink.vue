@@ -1,9 +1,6 @@
 <template>
   <!-- legend -->
-  <div
-    class="border border-gray-500 flex flex-row justify-center relative"
-    style="min-height: 200px"
-  >
+  <div class="flex flex-row justify-center relative" style="min-height: 200px">
     <div>
       <canvas width="1300" height="800"></canvas>
     </div>

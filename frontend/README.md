@@ -21,19 +21,6 @@ npm run build
 ``` bash
 npm run lint
 ```
-### Deploy to Firebase
-If you would like to push your own fork/clone of this repository to Firebase as a hosting provider, use the following instructions. You must already have a google email account and a project set up in your Firebase console. Please also remove any existing `.firebaserc` files. You don't need to edit your `firebase.json` file since it refers to the public files required for the deployment process.
-``` bash
-npm install -D firebase-tools
-
-// login to firebase
-npx firebase login
-
-// initialize the firebase repo
-npx firebase init
-
-npm run deploy
-```
 
 ### Customize configuration
 See [Configuration Reference](https://cli.vuejs.org/config/).

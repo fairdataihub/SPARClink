@@ -3,7 +3,6 @@ import { createRouter, createWebHistory } from "vue-router";
 import App from "./App.vue";
 import "./index.css";
 
-import HomePage from "./components/HomePage/HomePage.vue";
 import SparcLink from "./components/SparcLink/SparcLink.vue";
 
 const router = createRouter({
@@ -18,11 +17,7 @@ const router = createRouter({
       window.scrollTo(0, 0);
     }
   },
-  routes: [
-    { path: "/", name: "root", redirect: "/sparclink" },
-    { path: "/home", component: HomePage },
-    { path: "/sparclink", component: SparcLink },
-  ],
+  routes: [{ path: "/", name: "root", component: SparcLink }],
 });
 
 const app = createApp(App);
