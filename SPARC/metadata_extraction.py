@@ -80,6 +80,7 @@ def get_list_of_datasets_with_metadata(list_of_datasets):
         item['tags'] = response['tags']
         item['contributors'] = response['contributors']
 
+    local_filename = "dataset_description.xlsx"
     # extract metadata information
     for item in tqdm(list_of_datasets):
         # get the actual dataset_description.xlsx file.
@@ -92,11 +93,10 @@ def get_list_of_datasets_with_metadata(list_of_datasets):
         }}
         response = requests.request("POST", url, json=payload)
         response.raise_for_status()
-        local_filename = "dataset_description.xlsx"
-        totalbits = 0
-
         # write binary data to a file that is readable in pandas
         if response.status_code == 200:
+            totalbits = 0
+
             with open(local_filename, 'wb') as f:
                 for chunk in response.iter_content(chunk_size=1024):
                     if chunk:
@@ -166,7 +166,7 @@ def parsing_protocols(authorization_key):
     protocols = response.json()
 
     list_of_protocols = []
-    
+
     # total pages
     total_pages = protocols['pagination']['total_pages']
 
@@ -180,21 +180,23 @@ def parsing_protocols(authorization_key):
 
         # number of items in the page
         num_items = len(protocols['items'])
-       
+
         # for each item
         for j in range(num_items):
-            item_dict = {}
+            item_dict = {
+                'id': protocols['items'][j]['id'],
+                'title': protocols['items'][j]['title'],
+                'image': protocols['items'][j]['image'],
+                'uri': protocols['items'][j]['uri'],
+                'stats': protocols['items'][j]['stats'],
+                'authors': protocols['items'][j]['authors'],
+                'total_collections': protocols['items'][j][
+                    'total_collections'
+                ],
+                'number_of_steps': protocols['items'][j]['number_of_steps'],
+                'url': protocols['items'][j]['url'],
+            }
 
-            item_dict['id'] = protocols['items'][j]['id']
-            item_dict['title'] = protocols['items'][j]['title']
-            item_dict['image'] = protocols['items'][j]['image']
-            # item_dict['doi'] = protocols['items'][j]['doi']
-            item_dict['uri'] = protocols['items'][j]['uri']
-            item_dict['stats'] = protocols['items'][j]['stats']
-            item_dict['authors'] = protocols['items'][j]['authors']
-            item_dict['total_collections'] = protocols['items'][j]['total_collections']
-            item_dict['number_of_steps'] = protocols['items'][j]['number_of_steps']
-            item_dict['url'] = protocols['items'][j]['url']
 
             try:
                 if ((protocols['items'][j]['doi']).find('doi') != -1):
@@ -203,22 +205,18 @@ def parsing_protocols(authorization_key):
                     list_of_protocols.append(item_dict)
             except:
                 pass
-
 #    delete_protocols = []
 #    for protocol in list_of_protocols:
 #        for dataset in dataset_list:
 #            for item in dataset['protocolsDOI']:
 #                if (item.find(protocol['doi']) != -1):
 #                    delete_protocols.append(protocol['id'])\
-
 #    prot_list = []
 #    for item in list_of_protocols:
 #        if (item['id'] in delete_protocols):
 #            prot_list.append(item)
-
 #    # Final output with protocols filtered out
 #    # protocol_list
-
 #    return prot_list
     return list_of_protocols
 

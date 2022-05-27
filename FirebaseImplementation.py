@@ -48,7 +48,7 @@ Timestamp = time.time()
 # Retrieve datasets from SPARC pennsieve and associated papers,
 # and upload to firebase. It returns a list of award ids to look for awards
 #--------------------------------------------------------------
-def uploadDatasets (skip=0):
+def uploadDatasets(skip=0):
     print('Processing datasets...')
 
     global user
@@ -79,12 +79,19 @@ def uploadDatasets (skip=0):
         # Insert the dataset to the database
         dataset_key = dataset['datasetDOI'].translate(disallowed_chars)
 
-        dataset_record                  = {}
-        dataset_record['doi']           = dataset['datasetDOI']
-        dataset_record['name']          = dataset['name']
-        dataset_record['description']   = dataset['description']
-        dataset_record['award']         = dataset['properties']['award_id']
-        dataset_record['protocols']     = [ p.translate(disallowed_chars) if (p.find('org') == -1) else p.split('.org/')[1].translate(disallowed_chars) for p in dataset['protocolsDOI'] ]
+        dataset_record = {
+            'doi': dataset['datasetDOI'],
+            'name': dataset['name'],
+            'description': dataset['description'],
+            'award': dataset['properties']['award_id'],
+            'protocols': [
+                p.translate(disallowed_chars)
+                if (p.find('org') == -1)
+                else p.split('.org/')[1].translate(disallowed_chars)
+                for p in dataset['protocolsDOI']
+            ],
+        }
+
         dataset_record['tags']          = dataset['tags']
 
         db.child(user['localId']).child('Datasets').update({dataset_key: dataset_record}, user['idToken'])
@@ -94,7 +101,7 @@ def uploadDatasets (skip=0):
         for doi in dataset['originatingArticleDOI']:
             if (doi.find('org') != -1):
                 doi = doi.split('.org/')[1]
-            originating_articles.update(NN.getPublicationWithSearchTerm('{0}[doi]'.format(doi))) # Find paper with the given doi.
+            originating_articles |= NN.getPublicationWithSearchTerm('{0}[doi]'.format(doi))
 
         # Add protocols used by the dataset
         uploadDatasetProtocols(dataset['protocolsDOI'])
@@ -103,9 +110,7 @@ def uploadDatasets (skip=0):
         dataset_pub_records = NN.getPublicationWithSearchTerm('"{0}"'.format(dataset_record['doi'].split('.org/')[1]))
         dataset_pub_records.update(originating_articles)
 
-        i = 0
-        for k in dataset_pub_records:
-            i += 1
+        for i, k in enumerate(dataset_pub_records, start=1):
             print("---- Uploading paper : {0} / {1}".format(i, len(dataset_pub_records)))
 
             paper_key = k.translate(disallowed_chars)
@@ -114,7 +119,7 @@ def uploadDatasets (skip=0):
             dataset_pub_records[k]['direct']   = True # indicate that this paper is directly associated with SPARC
 
             uploadPaperOrUpdate(paper_key, 'datasets', dataset_pub_records[k])
-        
+
         award_list[dataset_key] = dataset_record['award']
 
     return award_list
@@ -124,16 +129,13 @@ def uploadDatasets (skip=0):
 # Retrieve information about a given list of awards from NIH reporter, 
 # find associated papers, and upload to firebase.
 #--------------------------------------------------------------
-def uploadAwards (award_list):
+def uploadAwards(award_list):
     print('Processing awards...')
 
     global user
     global Timestamp
 
-    curr_dataset = 0
-    for dataset_key in award_list:
-        curr_dataset += 1
-        
+    for curr_dataset, dataset_key in enumerate(award_list, start=1):
         # update the user token if its been more than 30 min
         dt = time.time() - Timestamp
         if (dt > 1800):
@@ -141,7 +143,7 @@ def uploadAwards (award_list):
             user['idToken']      = refreshed_user['idToken']
             user['refreshToken'] = refreshed_user['refreshToken']
             Timestamp = time.time()
-        
+
         award_num = award_list[dataset_key]
 
         print("--- Processing award of dataset: {0} ({1}/{2})".format(dataset_key, curr_dataset, len(award_list)))
@@ -153,12 +155,9 @@ def uploadAwards (award_list):
         for k in award_record:
             sub_award = award_record[k]
             pubs = NN.getPublications(sub_award['appl_id'])
-            award_pub.update(pubs)
-        
-        # Upload the award papers
-        i = 0
-        for k in award_pub:
-            i += 1
+            award_pub |= pubs
+
+        for i, (k, v) in enumerate(award_pub.items(), start=1):
             print("---- Uploading paper: {0} / {1}".format(i, len(award_pub)))
 
             paper_key = k.translate(disallowed_chars)
@@ -166,7 +165,7 @@ def uploadAwards (award_list):
             award_pub[k]['citations']= 0
             award_pub[k]['direct']   = True # indicate that the paper is directly associated with SPARC
 
-            uploadPaperOrUpdate(paper_key, 'awards', award_pub[k])
+            uploadPaperOrUpdate(paper_key, 'awards', v)
 
     return
 
@@ -176,26 +175,24 @@ def uploadAwards (award_list):
 # the protocols may not be from SPARC. If it is a SPARC protocol, 
 # it will be updated in the protocol step.
 #--------------------------------------------------------------
-def uploadDatasetProtocols (dataset_protocol_list):
-    # Add protocols. 
+def uploadDatasetProtocols(dataset_protocol_list):
+    # Add protocols.
     for protocol_doi in dataset_protocol_list:
         protocol_key = ''
         if (protocol_doi.find('org') != -1):
             protocol_doi_only = protocol_doi.split('.org/')[1]
-        
+
         protocol_key = protocol_doi_only.translate(disallowed_chars)
         protocol_record = db.child(user['localId']).child('Protocols').child(protocol_key).get(user['idToken']).val()
 
-        if (protocol_record == None):
+        if protocol_record is None:
             # protocol doesn't exist
             db.child(user['localId']).child('Protocols').update({protocol_key: {'url': protocol_doi, 'doi': protocol_doi_only}}, user['idToken'])
 
         # Add papers associated with the protocol
         protocol_pub_records = NN.getPublicationWithSearchTerm('"{0}"'.format(protocol_doi_only))
-            
-        i = 0
-        for k in protocol_pub_records:
-            i += 1
+
+        for i, k in enumerate(protocol_pub_records, start=1):
             print("---- Uploading protocol papers : {0} / {1}".format(i, len(protocol_pub_records)))
 
             paper_key = k.translate(disallowed_chars)
@@ -211,10 +208,10 @@ def uploadDatasetProtocols (dataset_protocol_list):
 # uploadProtocols:
 # Retrieve protocol information from SPARC protocols.io, and upload to firebase
 #--------------------------------------------------------------
-def uploadProtocols ():
+def uploadProtocols():
     global user
     global Timestamp
-    
+
     print('Processing protocols...')
 
     sparc_protocol_list = SPARC.parsing_protocols(ENV_CONFIG['PROTOCOLS_IO_KEY'])
@@ -222,7 +219,7 @@ def uploadProtocols ():
     curr_protocol = 0
     for protocol in sparc_protocol_list:
         curr_protocol += 1
-        
+
         # update the user token if its been more than 30 min
         dt = time.time() - Timestamp
         if (dt > 1800):
@@ -230,35 +227,34 @@ def uploadProtocols ():
             user['idToken']      = refreshed_user['idToken']
             user['refreshToken'] = refreshed_user['refreshToken']
             Timestamp = time.time()
-        
+
         # Ignore if the protocol doesn't have a doi
         if 'doi' not in protocol:
             continue
 
         if (protocol['doi'].find('org') != -1):
             protocol['doi'] = protocol['doi'].split('./org')[1]
-        
+
         protocol_key = protocol['doi'].translate(disallowed_chars)
 
         print("--- Processing protocol {0} / {1}".format(curr_protocol, len(sparc_protocol_list)))
 
-        protocol_record             = {}
-        protocol_record['title']    = protocol['title']
-        protocol_record['authors']  = protocol['authors']
-        protocol_record['url']      = protocol['url']
-        protocol_record['doi']      = protocol['doi']
+        protocol_record = {
+            'title': protocol['title'],
+            'authors': protocol['authors'],
+            'url': protocol['url'],
+            'doi': protocol['doi'],
+        }
 
         db.child(user['localId']).child('Protocols').update({protocol_key: protocol_record}, user['idToken'])
 
         # Find papers associated with the protocol
-        
+
         protocol_pub_records   = NN.getPublicationWithSearchTerm('"{0}"'.format(protocol_record['doi']))
         protocol_pub_records_2 = NN.getPublicationWithSearchTerm('"{0}"'.format(protocol_record['url']))
         protocol_pub_records.update(protocol_pub_records_2)
-        
-        i = 0
-        for k in protocol_pub_records:
-            i += 1
+
+        for i, k in enumerate(protocol_pub_records, start=1):
             print("---- Uploading paper : {0} / {1}".format(i, len(protocol_pub_records)))
 
             paper_key = k.translate(disallowed_chars)
@@ -274,7 +270,7 @@ def uploadProtocols ():
 # uploadCitations:
 # Find the citations for each direct paper in firebase, and uplaod them.
 #--------------------------------------------------------------
-def uploadCitations (skip=0):
+def uploadCitations(skip=0):
     global user
     global Timestamp
 
@@ -288,7 +284,7 @@ def uploadCitations (skip=0):
 
         if (curr_paper < skip):
             continue
-        
+
         # update the user token if its been more than 30 min
         dt = time.time() - Timestamp
         if (dt > 1800):
@@ -298,7 +294,7 @@ def uploadCitations (skip=0):
             Timestamp = time.time()
 
         paper = papers[paper_key]
-        
+
         # Ignore if the paper is not directly connected to SPARC
         if ('direct' not in paper or paper['direct'] != True):
             continue
@@ -310,12 +306,10 @@ def uploadCitations (skip=0):
             citedby = NN.getCitedBy('pm_id', paper['pm_id'])
         elif ('pmc_id' in paper):
             citedby = NN.getCitedBy('pm_id', paper['pmc_id'])
-        
+
         db.child(user['localId']).child('Papers').child(paper_key).update({'citations': len(citedby)}, user['idToken'])
 
-        i = 0
-        for kk in citedby:
-            i += 1
+        for i, kk in enumerate(citedby, start=1):
             print("---- Uploading citation {0}/{1}".format(i, len(citedby)))
 
             citedby[kk]['papers']   = [paper_key]

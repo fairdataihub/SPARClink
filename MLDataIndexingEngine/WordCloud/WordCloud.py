@@ -34,10 +34,16 @@ def set_stopwords():
     return set(stopwords.words('english'))
 
 def generate_wordCloud(sentences):
-    text = []
     en_stops = set_stopwords()
-    for sentence in sentences:
-      text.append([i for i in remove_punctuation(text_lowercase(sentence)).split(" ") if i not in en_stops])
+    text = [
+        [
+            i
+            for i in remove_punctuation(text_lowercase(sentence)).split(" ")
+            if i not in en_stops
+        ]
+        for sentence in sentences
+    ]
+
     text = Counter([i for j in text for i in j])
     makeImage(text)
 

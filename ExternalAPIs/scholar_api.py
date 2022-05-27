@@ -47,8 +47,7 @@ def get_fromoriginatingdoi(originatingArticleDOI, authorization_key):
         "api_key": authorization_key
     }
     search = GoogleSearch(params)
-    results = search.get_json()
-    return results
+    return search.get_json()
 
 # results = get_fromoriginatingdoi("10.13003/5jchdy")
 # output below
@@ -125,15 +124,17 @@ def get_fromoriginatingdoi(originatingArticleDOI, authorization_key):
 
 # Taking publication information and citation information from scraped data
 def getcitationandpubinfo(results):
-  record = {}
-  for item in results['organic_results']:
-    data = {}
-    data['title'] = item['title']
-    data['author_info'] = item['publication_info']
-    data['citation_info'] = item['inline_links']
-    data['cites_id'] = item['inline_links']['cited_by']['cites_id']
-    record[item['position']] = data
-    return record
+    record = {}
+    for item in results['organic_results']:
+        data = {
+            'title': item['title'],
+            'author_info': item['publication_info'],
+            'citation_info': item['inline_links'],
+            'cites_id': item['inline_links']['cited_by']['cites_id'],
+        }
+
+        record[item['position']] = data
+        return record
 
 
 #response = getcitationandpubinfo(results)
@@ -208,5 +209,4 @@ def get_fromcitesid(cites_id, authorization_key):
         "api_key": authorization_key
     }
     search = GoogleSearch(params)
-    results = search.get_json()
-    return results
+    return search.get_json()

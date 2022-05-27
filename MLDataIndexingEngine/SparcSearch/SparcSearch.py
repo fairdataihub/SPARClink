@@ -32,8 +32,8 @@ class SpellCorrector(SpellCheck):
     def __init__(self, dictionary, verbose=0):
         super().__init__(dictionary=dictionary, verbose=verbose)
 
-    def words(text):
-        return re.findall(r'\w+', text.lower())
+    def words(self):
+        return re.findall(r'\w+', self.lower())
 
     def P(self, word): 
         "Probability of `word`."
@@ -60,7 +60,7 @@ class SpellCorrector(SpellCheck):
 
     def known(self, words):
         "The subset of `words` that appear in the dictionary of WORDS."
-        return set(w for w in words if w in self.dictionary)
+        return {w for w in words if w in self.dictionary}
 
     def edits1(self, word):
         "All edits that are one edit away from `word`."
@@ -110,13 +110,13 @@ class SymSpell(SpellCheck):
                 edward 154
                 edwards 50
                 ...
-        """ 
+        """
         if self.verbose > 3 or verbose > 3:
             print('Size of dictionary: %d' % len(dictionary))
 
         with open(file_dir + file_name, "w") as text_file:
             for token, count in dictionary.items():
-                text_file.write(token + ' ' + str(count))
+                text_file.write(f'{token} {str(count)}')
                 text_file.write('\n')
         
     def correction(self, word, max_edit_distance_lookup=2, mode='cloest'): 
@@ -160,8 +160,7 @@ def generate_model_our_Data(title):
     # save model
     model.save('model_short.bin')
 
-    new_model = Word2Vec.load('model_short.bin')
-    return new_model
+    return Word2Vec.load('model_short.bin')
 
 def get_glove2wv():
     glove_input_file = '/content/glove.6B.100d.txt'
@@ -195,8 +194,7 @@ def run_spellrecomender(title_word = False):
     return symspell
   
 def check_spell(symspell, w):
-    results = symspell.correction(word= w)
-    return results
+    return symspell.correction(word= w)
   
 def get_title_word_freq_dict(title):
     title_word = [i for k in title for i in k]
@@ -227,28 +225,21 @@ def set_stopwrds():
 def find_recomendation( title, lookup, word_list, new_model, full_model):
     distance = []
     if full_model:
-      for i in title:
-        distance.append(new_model.wmdistance(word_list, i))
+        distance.extend(new_model.wmdistance(word_list, i) for i in title)
     else:
-      for i in title:
-        distance.append(new_model.wv.wmdistance(word_list, i))
+        distance.extend(new_model.wv.wmdistance(word_list, i) for i in title)
     if list(set(distance))[0] == np.inf:
-      return "not in the vocablary" 
-    else:
-      zipped_lists = zip(distance, lookup)
-      sorted_zipped_lists = sorted(zipped_lists)
-      sorted_list1 = [element for _, element in sorted_zipped_lists]
-    return sorted_list1
+        return "not in the vocablary"
+    zipped_lists = zip(distance, lookup)
+    return [element for _, element in sorted(zipped_lists)]
 
 def getRecomendation(string, dat3, full_model, recomendation):
     fr = []
     string = remove_punctuation(text_lowercase(string)).split(" ")
-    string = [i for i in string if i not in set_stopwrds()] 
+    string = [i for i in string if i not in set_stopwrds()]
     title, lookup = create_titleandlookup(dat3)
     symspell = run_spellrecomender(get_title_word_freq_dict(title))
-    correct_spell = []
-    for i in string:
-        correct_spell.append(check_spell(symspell, i)[0]["word"])
+    correct_spell = [check_spell(symspell, i)[0]["word"] for i in string]
     if not recomendation:
        return fr, correct_spell
     new_model = generate_model_our_Data(title)
