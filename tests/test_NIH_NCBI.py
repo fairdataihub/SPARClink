@@ -55,7 +55,7 @@ class TestNIH_NCBI(unittest.TestCase, NIH_NCBI):
     # Check to see whether the publications retrieved from the test NIH reponse data in test_response_2.txt
     # matches the number of publications shown in the website (which is 5).
     #----------------------------------------------------
-    def test_NIHPublications (self):
+    def test_NIHPublications(self):
         with open('./tests/test_response_2.txt', 'r') as f:
             jsonData = json.loads(f.read())
             record = self.generateRecord(jsonData)
@@ -64,9 +64,9 @@ class TestNIH_NCBI(unittest.TestCase, NIH_NCBI):
             for k in record:
                 item = record[k]
                 pubRecord = self.getPublications(item['appl_id'])
-                publications.update(pubRecord)
+                publications |= pubRecord
 
-        
+
         self.assertEquals(len(publications), 5)
         return
     
